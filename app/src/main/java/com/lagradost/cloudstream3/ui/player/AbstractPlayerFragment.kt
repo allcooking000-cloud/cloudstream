@@ -57,15 +57,17 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
-            val viewModel = androidx.lifecycle.ViewModelProvider(this)[com.lagradost.cloudstream3.ui.player.PlayerGeneratorViewModel::class.java]
-            val currentLinks = viewModel.currentLinks.value
-            
-            val currentUrl = currentLinks?.firstOrNull()?.first?.url ?: ""
+            // প্লেয়ারের ভেতর থেকে সরাসরি ভিডিওর লিংক বের করা হচ্ছে
+            val currentUrl = try {
+                (this as? GeneratorPlayer)?.currentSelectedLink?.first?.url ?: ""
+            } catch (e: Exception) {
+                ""
+            }
             
             if (currentUrl.isNotBlank()) {
                 com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
             } else {
-                android.widget.Toast.makeText(context, "No active video link found", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "No active video link found. Are you playing a stream?", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
