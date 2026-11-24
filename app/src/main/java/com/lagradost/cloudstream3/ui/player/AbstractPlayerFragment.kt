@@ -63,6 +63,21 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
+    // 👇 নতুন যোগ করা স্ক্যানার লঞ্চার 👇
+    private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
+        val context = activity
+        if (context != null && result.contents != null) {
+            // বর্তমানে যেই ভিডিও চলছে তার লিংক বের করার চেষ্টা করা হচ্ছে
+            val currentUrl = try { 
+                (this as? com.lagradost.cloudstream3.ui.player.BasePlayer)?.currentSelectedLink?.first?.url ?: ""
+            } catch (e: Exception) { "" }
+            
+            // স্ক্যান রেজাল্ট এবং ভিডিও লিংক টিভিতে পাঠানো
+            com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
+        }
+    }
+    // 👆 নতুন কোড শেষ 👆
+
     // No-op callbacks (nextEpisode, prevEpisode, etc.) are intentionally left as
     // open so subclasses can override only what they need.  The ones below throw
     // to make it obvious when an implementation is missing.
@@ -122,6 +137,13 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.callbacks = this
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
+
+        // 👇 স্ক্রিনে লম্বা সময় চাপ দিলে (Long Press) স্ক্যানার ওপেন হওয়ার কোড 👇
+        binding.root.setOnLongClickListener {
+            com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
+            true
+        }
+        // 👆 নতুন কোড শেষ 👆
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
