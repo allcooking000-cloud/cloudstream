@@ -18,16 +18,9 @@ enum class PlayerResize(@StringRes val nameRes: Int) {
     Zoom(R.string.resize_zoom),
 }
 
-// when the player should switch skip op to next episode
 const val SKIP_OP_VIDEO_PERCENTAGE = 50
-
-// when the player should preload the next episode for faster loading
 const val PRELOAD_NEXT_EPISODE_PERCENTAGE = 80
-
-// when the player should mark the episode as watched and resume watching the next
 const val NEXT_WATCH_EPISODE_PERCENTAGE = 90
-
-// when the player should sync the progress of "watched", TODO MAKE SETTING
 const val UPDATE_SYNC_PROGRESS_PERCENTAGE = 80
 
 @OptIn(UnstableApi::class)
@@ -35,10 +28,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
     bindingCreator: BindingCreator<T>
 ) : BaseFragment<T>(bindingCreator), PlayerView.Callbacks {
 
-    // Stored pre-initialization so subclasses can set them before onBindingCreated.
     private var _player: IPlayer = CS3IPlayer()
-
-    /** The shared [PlayerView] host that owns all player state and view references. */
     protected var playerHostView: PlayerView? = null
 
     var player: IPlayer
@@ -50,10 +40,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 
     val subView: SubtitleView? get() = playerHostView?.subView
     val playerPausePlay: ImageView? get() = playerHostView?.playerPausePlay
-
-    /** The underlying [androidx.media3.ui.PlayerView] widget (named to avoid conflict with our [PlayerView]). */
-    val playerView: androidx.media3.ui.PlayerView?
-        get() = playerHostView?.exoPlayerView
+    val playerView: androidx.media3.ui.PlayerView? get() = playerHostView?.exoPlayerView
 
     var currentPlayerStatus: CSPlayerLoading
         get() = playerHostView?.currentPlayerStatus ?: CSPlayerLoading.IsBuffering
@@ -67,67 +54,31 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
-            // বর্তমানে যেই ভিডিও চলছে তার লিংক বের করার চেষ্টা করা হচ্ছে
+            // প্লেয়ারের ভেতর থেকে সরাসরি ভিডিওর লিংক বের করা হচ্ছে
             val currentUrl = try { 
-                (this as? com.lagradost.cloudstream3.ui.player.BasePlayer)?.currentSelectedLink?.first?.url ?: ""
+                (player as? CS3IPlayer)?.exoPlayer?.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
             } catch (e: Exception) { "" }
             
-            // স্ক্যান রেজাল্ট এবং ভিডিও লিংক টিভিতে পাঠানো
             com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
         }
     }
     // 👆 নতুন কোড শেষ 👆
 
-    // No-op callbacks (nextEpisode, prevEpisode, etc.) are intentionally left as
-    // open so subclasses can override only what they need.  The ones below throw
-    // to make it obvious when an implementation is missing.
+    override fun nextEpisode() { throw NotImplementedError() }
+    override fun prevEpisode() { throw NotImplementedError() }
+    override fun playerPositionChanged(position: Long, duration: Long) { throw NotImplementedError() }
+    override fun playerDimensionsLoaded(width: Int, height: Int) { throw NotImplementedError() }
+    override fun subtitlesChanged() { throw NotImplementedError() }
+    override fun embeddedSubtitlesFetched(subtitles: List<SubtitleData>) { throw NotImplementedError() }
+    override fun onTracksInfoChanged() { throw NotImplementedError() }
+    override fun exitedPipMode() { throw NotImplementedError() }
+    override fun hasNextMirror(): Boolean { throw NotImplementedError() }
+    override fun nextMirror() { throw NotImplementedError() }
 
-    override fun nextEpisode() {
-        throw NotImplementedError()
-    }
-
-    override fun prevEpisode() {
-        throw NotImplementedError()
-    }
-
-    override fun playerPositionChanged(position: Long, duration: Long) {
-        throw NotImplementedError()
-    }
-
-    override fun playerDimensionsLoaded(width: Int, height: Int) {
-        throw NotImplementedError()
-    }
-
-    override fun subtitlesChanged() {
-        throw NotImplementedError()
-    }
-
-    override fun embeddedSubtitlesFetched(subtitles: List<SubtitleData>) {
-        throw NotImplementedError()
-    }
-
-    override fun onTracksInfoChanged() {
-        throw NotImplementedError()
-    }
-
-    override fun exitedPipMode() {
-        throw NotImplementedError()
-    }
-
-    override fun hasNextMirror(): Boolean {
-        throw NotImplementedError()
-    }
-
-    override fun nextMirror() {
-        throw NotImplementedError()
-    }
-
-    /** Delegates to [PlayerView.playerError] by default; override to customize. */
     override fun playerError(exception: Throwable) {
         playerHostView?.playerError(exception)
     }
 
-    /** Player fragments don't need system-bar padding adjustment by default. */
     override fun fixLayout(view: View) = Unit
 
     override fun onBindingCreated(binding: T, savedInstanceState: Bundle?) {
@@ -138,12 +89,11 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 স্ক্রিনে লম্বা সময় চাপ দিলে (Long Press) স্ক্যানার ওপেন হওয়ার কোড 👇
+        // 👇 লম্বা সময় চাপ দিলে স্ক্যানার ওপেন হবে 👇
         binding.root.setOnLongClickListener {
             com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
             true
         }
-        // 👆 নতুন কোড শেষ 👆
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
