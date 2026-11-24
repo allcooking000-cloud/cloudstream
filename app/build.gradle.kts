@@ -180,6 +180,16 @@ android {
         }
     }
 
+    // 👇 ফোন (৬৪-বিট) এবং টিভি বক্স (৩২-বিট) দুটোর জন্যই সাপোর্ট করার কোড 👇
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a")
+            isUniversalApk = false
+        }
+    }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.toVersion(javaTarget.target)
@@ -296,6 +306,9 @@ dependencies {
 
     implementation(project(":library"))
     implementation(project(":shared"))
+
+    // 👇 নতুন যোগ করা ZXing লাইব্রেরি (স্ক্যানারের জন্য) 👇
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 }
 
 tasks.register<Jar>("androidSourcesJar") {
