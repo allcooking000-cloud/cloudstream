@@ -29,6 +29,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 ) : BaseFragment<T>(bindingCreator), PlayerView.Callbacks {
 
     private var _player: IPlayer = CS3IPlayer()
+
     protected var playerHostView: PlayerView? = null
 
     var player: IPlayer
@@ -40,7 +41,9 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 
     val subView: SubtitleView? get() = playerHostView?.subView
     val playerPausePlay: ImageView? get() = playerHostView?.playerPausePlay
-    val playerView: androidx.media3.ui.PlayerView? get() = playerHostView?.exoPlayerView
+
+    val playerView: androidx.media3.ui.PlayerView?
+        get() = playerHostView?.exoPlayerView
 
     var currentPlayerStatus: CSPlayerLoading
         get() = playerHostView?.currentPlayerStatus ?: CSPlayerLoading.IsBuffering
@@ -50,16 +53,20 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 নতুন যোগ করা স্ক্যানার লঞ্চার 👇
+    // 👇 নতুন যোগ করা স্ক্যানার লঞ্চার (আসল লিংকসহ) 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
-            // প্লেয়ারের ভেতর থেকে সরাসরি ভিডিওর লিংক বের করা হচ্ছে
-            val currentUrl = try { 
-                (player as? CS3IPlayer)?.exoPlayer?.currentMediaItem?.localConfiguration?.uri?.toString() ?: ""
-            } catch (e: Exception) { "" }
+            val viewModel = androidx.lifecycle.ViewModelProvider(this)[com.lagradost.cloudstream3.ui.player.PlayerGeneratorViewModel::class.java]
+            val currentLinks = viewModel.currentLinks.value
             
-            com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
+            val currentUrl = currentLinks?.firstOrNull()?.first?.url ?: ""
+            
+            if (currentUrl.isNotBlank()) {
+                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
+            } else {
+                android.widget.Toast.makeText(context, "No active video link found", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
     // 👆 নতুন কোড শেষ 👆
