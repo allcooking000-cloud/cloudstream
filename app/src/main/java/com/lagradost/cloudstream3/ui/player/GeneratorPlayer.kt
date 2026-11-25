@@ -180,7 +180,7 @@ class GeneratorPlayer : FullScreenPlayer() {
     private lateinit var viewModel: PlayerGeneratorViewModel //by activityViewModels()
     private lateinit var sync: SyncViewModel
 
-    private var currentSelectedLink: Pair<ExtractorLink?, ExtractorUri?>? = null
+    var currentSelectedLink: Pair<ExtractorLink?, ExtractorUri?>? = null
     private var currentSelectedSubtitles: SubtitleData? = null
     private val currentMeta: Any? get() = viewModel.state.generatorState?.meta
     private val nextMeta: Any? get() = viewModel.state.generatorState?.nextMeta
