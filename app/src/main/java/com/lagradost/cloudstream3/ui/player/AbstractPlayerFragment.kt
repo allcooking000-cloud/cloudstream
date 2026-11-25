@@ -2,6 +2,8 @@ package com.lagradost.cloudstream3.ui.player
 
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -99,33 +101,46 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 নতুন যোগ করা ভাসমান (Floating) স্ক্যানার বাটন 👇
+        // 👇 নতুন যোগ করা স্মার্ট (Floating) স্ক্যানার বাটন 👇
         try {
             val rootView = binding.root as? android.view.ViewGroup
             if (rootView != null) {
                 val castButton = ImageView(ctx).apply {
-                    setImageResource(android.R.drawable.ic_menu_share) // শেয়ার বা কাস্টিং আইকন
-                    setBackgroundColor(Color.parseColor("#80000000")) // হালকা কালো ব্যাকগ্রাউন্ড
+                    setImageResource(android.R.drawable.ic_menu_share)
+                    setBackgroundColor(Color.parseColor("#80000000"))
                     setPadding(30, 30, 30, 30)
                     setColorFilter(Color.WHITE)
-                    // বাটনে ক্লিক করলে স্ক্যানার ওপেন হবে
+                    visibility = View.GONE // শুরুতে বাটনটি লুকানো থাকবে
                     setOnClickListener {
                         com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
                     }
                 }
                 
-                // স্ক্রিনের উপরের ডানদিকে বাটনটি বসানো হচ্ছে
                 val params = FrameLayout.LayoutParams(
-                    150, 150, // বাটনের সাইজ
+                    150, 150, 
                     Gravity.TOP or Gravity.END
                 )
-                params.setMargins(40, 40, 40, 40) // চারপাশে একটু ফাঁকা জায়গা
+                params.setMargins(40, 40, 40, 40)
                 
                 rootView.addView(castButton, params)
                 castButton.bringToFront()
+
+                // স্ক্রিনে ৩ সেকেন্ড পর বাটন লুকানোর কোড
+                val handler = Handler(Looper.getMainLooper())
+                val hideRunnable = Runnable { castButton.visibility = View.GONE }
+
+                // স্ক্রিনে টাচ করলে বাটনটি দেখাবে এবং ৩ সেকেন্ড পর লুকিয়ে যাবে
+                rootView.setOnTouchListener { _, event ->
+                    if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                        castButton.visibility = View.VISIBLE
+                        handler.removeCallbacks(hideRunnable)
+                        handler.postDelayed(hideRunnable, 3000) // ৩ সেকেন্ড
+                    }
+                    false // প্লেয়ারের আগের সব ফিচার ঠিক থাকবে
+                }
             }
         } catch (e: Exception) {
-            // যদি কোনো কারণে বাটন বসাতে সমস্যা হয়, অ্যাপ ক্র্যাশ করবে না
+            // কোনো এরর হলে অ্যাপ ক্র্যাশ করবে না
         }
     }
 
