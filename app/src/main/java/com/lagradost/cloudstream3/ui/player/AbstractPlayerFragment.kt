@@ -1,9 +1,10 @@
 package com.lagradost.cloudstream3.ui.player
 
+import android.graphics.Color
 import android.os.Bundle
-import android.view.GestureDetector
-import android.view.MotionEvent
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.annotation.OptIn
 import androidx.annotation.StringRes
@@ -55,7 +56,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 নতুন যোগ করা স্ক্যানার লঞ্চার (আসল লিংকসহ) 👇
+    // 👇 স্ক্যানার লঞ্চার 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
@@ -68,11 +69,10 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
             if (currentUrl.isNotBlank()) {
                 com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
             } else {
-                android.widget.Toast.makeText(context, "No active video link found. Are you playing a stream?", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, "No active video link found.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
-    // 👆 নতুন কোড শেষ 👆
 
     override fun nextEpisode() { throw NotImplementedError() }
     override fun prevEpisode() { throw NotImplementedError() }
@@ -99,20 +99,34 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 নতুন যোগ করা টাচ ডিটেক্টর 👇
-        val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onLongPress(e: MotionEvent) {
-                // ভিডিও প্লেয়ারের স্পিড বাড়ানোর কাজটি ব্লক না করে শুধু আমাদের স্ক্যানারটি ওপেন করবে
-                com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
+        // 👇 নতুন যোগ করা ভাসমান (Floating) স্ক্যানার বাটন 👇
+        try {
+            val rootView = binding.root as? android.view.ViewGroup
+            if (rootView != null) {
+                val castButton = ImageView(ctx).apply {
+                    setImageResource(android.R.drawable.ic_menu_share) // শেয়ার বা কাস্টিং আইকন
+                    setBackgroundColor(Color.parseColor("#80000000")) // হালকা কালো ব্যাকগ্রাউন্ড
+                    setPadding(30, 30, 30, 30)
+                    setColorFilter(Color.WHITE)
+                    // বাটনে ক্লিক করলে স্ক্যানার ওপেন হবে
+                    setOnClickListener {
+                        com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
+                    }
+                }
+                
+                // স্ক্রিনের উপরের ডানদিকে বাটনটি বসানো হচ্ছে
+                val params = FrameLayout.LayoutParams(
+                    150, 150, // বাটনের সাইজ
+                    Gravity.TOP or Gravity.END
+                )
+                params.setMargins(40, 40, 40, 40) // চারপাশে একটু ফাঁকা জায়গা
+                
+                rootView.addView(castButton, params)
+                castButton.bringToFront()
             }
-        })
-
-        // পুরো প্লেয়ার স্ক্রিনে টাচ ডিটেক্টরটি সেট করা হলো
-        binding.root.setOnTouchListener { _, event ->
-            gestureDetector.onTouchEvent(event)
-            false // false ফেরত দেওয়ায় প্লেয়ারের আগের সব ফিচার (প্লে/পজ, 2x স্পিড) ঠিক থাকবে
+        } catch (e: Exception) {
+            // যদি কোনো কারণে বাটন বসাতে সমস্যা হয়, অ্যাপ ক্র্যাশ করবে না
         }
-        // 👆 নতুন কোড শেষ 👆
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
