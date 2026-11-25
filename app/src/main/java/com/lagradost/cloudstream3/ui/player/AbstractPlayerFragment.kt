@@ -1,6 +1,8 @@
 package com.lagradost.cloudstream3.ui.player
 
 import android.os.Bundle
+import android.view.GestureDetector
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
 import androidx.annotation.OptIn
@@ -57,7 +59,6 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
-            // প্লেয়ারের ভেতর থেকে সরাসরি ভিডিওর লিংক বের করা হচ্ছে
             val currentUrl = try {
                 (this as? GeneratorPlayer)?.currentSelectedLink?.first?.url ?: ""
             } catch (e: Exception) {
@@ -98,18 +99,20 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 লম্বা সময় চাপ দিলে স্ক্যানার ওপেন হবে (সরাসরি ভিডিও ভিউতে) 👇
-        // এখানে binding.root এর বদলে playerView ব্যবহার করা হয়েছে যাতে গেসচার কনফ্লিক্ট না হয়
-        playerView?.setOnLongClickListener {
-            com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
-            true
+        // 👇 নতুন যোগ করা টাচ ডিটেক্টর 👇
+        val gestureDetector = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onLongPress(e: MotionEvent) {
+                // ভিডিও প্লেয়ারের স্পিড বাড়ানোর কাজটি ব্লক না করে শুধু আমাদের স্ক্যানারটি ওপেন করবে
+                com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
+            }
+        })
+
+        // পুরো প্লেয়ার স্ক্রিনে টাচ ডিটেক্টরটি সেট করা হলো
+        binding.root.setOnTouchListener { _, event ->
+            gestureDetector.onTouchEvent(event)
+            false // false ফেরত দেওয়ায় প্লেয়ারের আগের সব ফিচার (প্লে/পজ, 2x স্পিড) ঠিক থাকবে
         }
-        
-        // বিকল্প হিসেবে রুট ভিউতেও দেওয়া হলো
-        binding.root.setOnLongClickListener {
-            com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
-            true
-        }
+        // 👆 নতুন কোড শেষ 👆
     }
 
     override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
