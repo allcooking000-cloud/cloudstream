@@ -98,7 +98,14 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 লম্বা সময় চাপ দিলে স্ক্যানার ওপেন হবে 👇
+        // 👇 লম্বা সময় চাপ দিলে স্ক্যানার ওপেন হবে (সরাসরি ভিডিও ভিউতে) 👇
+        // এখানে binding.root এর বদলে playerView ব্যবহার করা হয়েছে যাতে গেসচার কনফ্লিক্ট না হয়
+        playerView?.setOnLongClickListener {
+            com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
+            true
+        }
+        
+        // বিকল্প হিসেবে রুট ভিউতেও দেওয়া হলো
         binding.root.setOnLongClickListener {
             com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
             true
