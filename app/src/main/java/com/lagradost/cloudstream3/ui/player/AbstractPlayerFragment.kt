@@ -59,6 +59,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
+    // 👇 স্ক্যানার লঞ্চার 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
@@ -69,7 +70,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
             }
             
             if (currentUrl.isNotBlank()) {
-                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, context)
+                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, null, context)
             } else {
                 android.widget.Toast.makeText(context, "No active video link found.", android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -131,8 +132,8 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                 // শুরুতে ৩ সেকেন্ড পর বাটনটি লুকিয়ে যাবে
                 handler.postDelayed(hideRunnable, 3000)
 
-                // স্ক্রিনে টাচ করলে বাটনটি সামনে আসবে এবং টাইমার রিসেট হবে
-                rootView.setOnTouchListener { _, event ->
+                // 👇 এখানে playerView ব্যবহার করা হয়েছে যাতে টাচ কাজ করে 👇
+                playerView?.setOnTouchListener { _, event ->
                     if (event.action == MotionEvent.ACTION_DOWN) {
                         castButton.visibility = View.VISIBLE
                         castButton.bringToFront() // প্লেয়ারের কন্ট্রোলের সামনে নিয়ে আসা
@@ -141,6 +142,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                     }
                     false // প্লেয়ারের আগের সব ফিচার (প্লে/পজ) ঠিক থাকবে
                 }
+                // 👆playerView এর টাচ শেষ 👆
             }
         } catch (e: Exception) {
             // কোনো এরর হলে অ্যাপ ক্র্যাশ করবে না
