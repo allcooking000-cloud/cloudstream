@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -58,7 +59,6 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 স্ক্যানার লঞ্চার 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val context = activity
         if (context != null && result.contents != null) {
@@ -106,11 +106,11 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
             val rootView = binding.root as? android.view.ViewGroup
             if (rootView != null) {
                 val castButton = ImageView(ctx).apply {
-                    setImageResource(android.R.drawable.ic_menu_share)
-                    setBackgroundColor(Color.parseColor("#80000000"))
-                    setPadding(30, 30, 30, 30)
+                    setImageResource(android.R.drawable.ic_menu_share) // শেয়ার বা কাস্টিং আইকন
+                    setBackgroundColor(Color.parseColor("#80000000")) // হালকা কালো ব্যাকগ্রাউন্ড
+                    setPadding(40, 40, 40, 40)
                     setColorFilter(Color.WHITE)
-                    visibility = View.GONE // শুরুতে বাটনটি লুকানো থাকবে
+                    visibility = View.VISIBLE // শুরুতে বাটনটি দেখাবে
                     setOnClickListener {
                         com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
                     }
@@ -125,18 +125,21 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                 rootView.addView(castButton, params)
                 castButton.bringToFront()
 
-                // স্ক্রিনে ৩ সেকেন্ড পর বাটন লুকানোর কোড
                 val handler = Handler(Looper.getMainLooper())
                 val hideRunnable = Runnable { castButton.visibility = View.GONE }
 
-                // স্ক্রিনে টাচ করলে বাটনটি দেখাবে এবং ৩ সেকেন্ড পর লুকিয়ে যাবে
+                // শুরুতে ৩ সেকেন্ড পর বাটনটি লুকিয়ে যাবে
+                handler.postDelayed(hideRunnable, 3000)
+
+                // স্ক্রিনে টাচ করলে বাটনটি সামনে আসবে এবং টাইমার রিসেট হবে
                 rootView.setOnTouchListener { _, event ->
-                    if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                    if (event.action == MotionEvent.ACTION_DOWN) {
                         castButton.visibility = View.VISIBLE
+                        castButton.bringToFront() // প্লেয়ারের কন্ট্রোলের সামনে নিয়ে আসা
                         handler.removeCallbacks(hideRunnable)
-                        handler.postDelayed(hideRunnable, 3000) // ৩ সেকেন্ড
+                        handler.postDelayed(hideRunnable, 3000)
                     }
-                    false // প্লেয়ারের আগের সব ফিচার ঠিক থাকবে
+                    false // প্লেয়ারের আগের সব ফিচার (প্লে/পজ) ঠিক থাকবে
                 }
             }
         } catch (e: Exception) {
