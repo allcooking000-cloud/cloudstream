@@ -59,10 +59,10 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 স্ক্যানার লঞ্চার 👇
+    // 👇 Null চেক ঠিক করা হয়েছে 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
-        val context = activity
-        if (context != null && result.contents != null) {
+        val ctx = activity ?: return@registerForActivityResult // activity null হলে কিছু করবে না
+        if (result.contents != null) {
             val currentUrl = try {
                 (this as? GeneratorPlayer)?.currentSelectedLink?.first?.url ?: ""
             } catch (e: Exception) {
@@ -70,9 +70,9 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
             }
             
             if (currentUrl.isNotBlank()) {
-                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, null, context)
+                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, null, ctx)
             } else {
-                android.widget.Toast.makeText(context, "No active video link found.", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(ctx, "No active video link found.", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
