@@ -56,18 +56,16 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 Null চেক ঠিক করা হয়েছে 👇
+    // 👇 স্ক্যানার লঞ্চার (হেডারসহ প্রক্সি সাপোর্ট) 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val ctx = activity ?: return@registerForActivityResult
         if (result.contents != null) {
-            val currentUrl = try {
-                (this as? GeneratorPlayer)?.currentSelectedLink?.first?.url ?: ""
-            } catch (e: Exception) {
-                ""
-            }
+            val link = (this as? GeneratorPlayer)?.currentSelectedLink?.first
+            val currentUrl = link?.url ?: ""
+            val headers = link?.headers ?: emptyMap()
             
             if (currentUrl.isNotBlank()) {
-                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, null, ctx)
+                com.lagradost.cloudstream3.utils.RemoteCastHelper.handleScanResult(result.contents, currentUrl, headers, ctx)
             } else {
                 android.widget.Toast.makeText(ctx, "No active video link found.", android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -99,7 +97,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 নতুন যোগ করা স্মার্ট (Floating) স্ক্যানার বাটন 👇
+        // 👇 ফ্লোটিং স্ক্যানার বাটন (এরর-মুক্ত) 👇
         try {
             val rootView = binding.root as? android.view.ViewGroup
             if (rootView != null) {
@@ -114,25 +112,23 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                     }
                 }
                 
-                val params = FrameLayout.LayoutParams(
-                    150, 150, 
-                    Gravity.TOP or Gravity.END
-                )
+                val params = FrameLayout.LayoutParams(150, 150, Gravity.TOP or Gravity.END)
                 params.setMargins(40, 40, 40, 40)
                 
                 rootView.addView(castButton, params)
                 castButton.bringToFront()
 
-                // 👇 প্লেয়ারের কন্ট্রোলের সাথে বাটনটি সিঙ্ক করা হলো 👇
-                playerView?.setControllerVisibilityListener { visibility ->
-                    if (visibility == View.VISIBLE) {
-                        castButton.visibility = View.VISIBLE
-                        castButton.bringToFront() // প্লেয়ারের কন্ট্রোলের সামনে নিয়ে আসা
-                    } else {
-                        castButton.visibility = View.GONE
+                // 👇 Overload Ambiguity ঠিক করার কোড 👇
+                playerView?.setControllerVisibilityListener(object : androidx.media3.ui.PlayerView.ControllerVisibilityListener {
+                    override fun onVisibilityChanged(visibility: Int) {
+                        if (visibility == View.VISIBLE) {
+                            castButton.visibility = View.VISIBLE
+                            castButton.bringToFront() 
+                        } else {
+                            castButton.visibility = View.GONE
+                        }
                     }
-                }
-                // 👆 নতুন কোড শেষ 👆
+                })
             }
         } catch (e: Exception) {
             // কোনো এরর হলে অ্যাপ ক্র্যাশ করবে না
