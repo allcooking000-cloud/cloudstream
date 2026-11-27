@@ -11,7 +11,6 @@ import androidx.activity.result.ActivityResultLauncher
 
 object RemoteCastHelper {
 
-    // ১. স্ক্যানার ওপেন করার ফাংশন
     fun launchScanner(launcher: ActivityResultLauncher<ScanOptions>) {
         val options = ScanOptions()
         options.setDesiredBarcodeFormats(ScanOptions.QR_CODE)
@@ -21,8 +20,8 @@ object RemoteCastHelper {
         launcher.launch(options)
     }
 
-    // ২. স্ক্যান রেজাল্ট প্রসেস করা (টিভির আইপি নেওয়া এবং ভিডিও লিংক পাঠানো)
-    fun handleScanResult(result: String?, currentVideoUrl: String?, context: Activity) {
+    // এখানে ৪টি প্যারামিটার (headers সহ) 
+    fun handleScanResult(result: String?, currentVideoUrl: String?, headers: Map<String, String>?, context: Activity) {
         if (result == null) {
             Toast.makeText(context, "Scan Cancelled", Toast.LENGTH_SHORT).show()
             return
@@ -33,14 +32,17 @@ object RemoteCastHelper {
             return
         }
 
-        // টিভির আইপি (যেমন: http://192.168.1.5:8080/play) এর সাথে ভিডিও লিংক যুক্ত করা
         val encodedUrl = Uri.encode(currentVideoUrl)
-        val finalUrl = "$result?url=$encodedUrl"
+        
+        // হেডারগুলোকে স্ট্রিং এ কনভার্ট করে এনকোড করা
+        val headersString = headers?.entries?.joinToString("|") { "${it.key}:${it.value}" } ?: ""
+        val encodedHeaders = Uri.encode(headersString)
+
+        val finalUrl = "$result?url=$encodedUrl&headers=$encodedHeaders"
 
         sendRequestToTv(finalUrl, context)
     }
 
-    // ৩. টিভিতে রিকোয়েস্ট পাঠানো
     private fun sendRequestToTv(finalUrl: String, context: Activity) {
         val client = OkHttpClient()
         val request = Request.Builder().url(finalUrl).build()
