@@ -309,6 +309,8 @@ dependencies {
 
     // 👇 নতুন যোগ করা ZXing লাইব্রেরি (স্ক্যানারের জন্য) 👇
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+    // 👇 এই নতুন লাইনটি যোগ করুন 👇
+    implementation("org.nanohttpd:nanohttpd:2.3.1")
 }
 
 tasks.register<Jar>("androidSourcesJar") {
