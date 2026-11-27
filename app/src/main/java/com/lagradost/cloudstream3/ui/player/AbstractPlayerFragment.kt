@@ -2,10 +2,7 @@ package com.lagradost.cloudstream3.ui.player
 
 import android.graphics.Color
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.view.Gravity
-import android.view.MotionEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -61,7 +58,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 
     // 👇 Null চেক ঠিক করা হয়েছে 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
-        val ctx = activity ?: return@registerForActivityResult // activity null হলে কিছু করবে না
+        val ctx = activity ?: return@registerForActivityResult
         if (result.contents != null) {
             val currentUrl = try {
                 (this as? GeneratorPlayer)?.currentSelectedLink?.first?.url ?: ""
@@ -107,11 +104,11 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
             val rootView = binding.root as? android.view.ViewGroup
             if (rootView != null) {
                 val castButton = ImageView(ctx).apply {
-                    setImageResource(android.R.drawable.ic_menu_share) // শেয়ার বা কাস্টিং আইকন
-                    setBackgroundColor(Color.parseColor("#80000000")) // হালকা কালো ব্যাকগ্রাউন্ড
+                    setImageResource(android.R.drawable.ic_menu_share)
+                    setBackgroundColor(Color.parseColor("#80000000"))
                     setPadding(40, 40, 40, 40)
                     setColorFilter(Color.WHITE)
-                    visibility = View.VISIBLE // শুরুতে বাটনটি দেখাবে
+                    visibility = View.GONE // শুরুতে লুকানো থাকবে
                     setOnClickListener {
                         com.lagradost.cloudstream3.utils.RemoteCastHelper.launchScanner(scanLauncher)
                     }
@@ -126,23 +123,16 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                 rootView.addView(castButton, params)
                 castButton.bringToFront()
 
-                val handler = Handler(Looper.getMainLooper())
-                val hideRunnable = Runnable { castButton.visibility = View.GONE }
-
-                // শুরুতে ৩ সেকেন্ড পর বাটনটি লুকিয়ে যাবে
-                handler.postDelayed(hideRunnable, 3000)
-
-                // 👇 এখানে playerView ব্যবহার করা হয়েছে যাতে টাচ কাজ করে 👇
-                playerView?.setOnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_DOWN) {
+                // 👇 প্লেয়ারের কন্ট্রোলের সাথে বাটনটি সিঙ্ক করা হলো 👇
+                playerView?.setControllerVisibilityListener { visibility ->
+                    if (visibility == View.VISIBLE) {
                         castButton.visibility = View.VISIBLE
                         castButton.bringToFront() // প্লেয়ারের কন্ট্রোলের সামনে নিয়ে আসা
-                        handler.removeCallbacks(hideRunnable)
-                        handler.postDelayed(hideRunnable, 3000)
+                    } else {
+                        castButton.visibility = View.GONE
                     }
-                    false // প্লেয়ারের আগের সব ফিচার (প্লে/পজ) ঠিক থাকবে
                 }
-                // 👆playerView এর টাচ শেষ 👆
+                // 👆 নতুন কোড শেষ 👆
             }
         } catch (e: Exception) {
             // কোনো এরর হলে অ্যাপ ক্র্যাশ করবে না
