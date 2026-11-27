@@ -2,6 +2,8 @@ package com.lagradost.cloudstream3.ui.player
 
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.widget.FrameLayout
@@ -32,7 +34,6 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 ) : BaseFragment<T>(bindingCreator), PlayerView.Callbacks {
 
     private var _player: IPlayer = CS3IPlayer()
-
     protected var playerHostView: PlayerView? = null
 
     var player: IPlayer
@@ -44,9 +45,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
 
     val subView: SubtitleView? get() = playerHostView?.subView
     val playerPausePlay: ImageView? get() = playerHostView?.playerPausePlay
-
-    val playerView: androidx.media3.ui.PlayerView?
-        get() = playerHostView?.exoPlayerView
+    val playerView: androidx.media3.ui.PlayerView? get() = playerHostView?.exoPlayerView
 
     var currentPlayerStatus: CSPlayerLoading
         get() = playerHostView?.currentPlayerStatus ?: CSPlayerLoading.IsBuffering
@@ -56,7 +55,6 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         get() = playerHostView?.mMediaSession
         set(value) { playerHostView?.mMediaSession = value }
 
-    // 👇 স্ক্যানার লঞ্চার (হেডারসহ প্রক্সি সাপোর্ট) 👇
     private val scanLauncher = registerForActivityResult(com.journeyapps.barcodescanner.ScanContract()) { result ->
         val ctx = activity ?: return@registerForActivityResult
         if (result.contents != null) {
@@ -97,7 +95,7 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
         playerHostView?.bindViews(binding.root)
         playerHostView?.initialize()
 
-        // 👇 ফ্লোটিং স্ক্যানার বাটন (এরর-মুক্ত) 👇
+        // 👇 ফ্লোটিং স্ক্যানার বাটন (পার্মানেন্ট লুকানোর ফিক্সসহ) 👇
         try {
             val rootView = binding.root as? android.view.ViewGroup
             if (rootView != null) {
@@ -118,14 +116,20 @@ abstract class AbstractPlayerFragment<T : ViewBinding>(
                 rootView.addView(castButton, params)
                 castButton.bringToFront()
 
-                // 👇 Overload Ambiguity ঠিক করার কোড 👇
+                val handler = Handler(Looper.getMainLooper())
+                val hideRunnable = Runnable { castButton.visibility = View.GONE }
+
+                // কন্ট্রোলারের সাথে সিঙ্ক + ৩ সেকেন্ড পর জোরপূর্বক হাইড
                 playerView?.setControllerVisibilityListener(object : androidx.media3.ui.PlayerView.ControllerVisibilityListener {
                     override fun onVisibilityChanged(visibility: Int) {
                         if (visibility == View.VISIBLE) {
                             castButton.visibility = View.VISIBLE
-                            castButton.bringToFront() 
+                            castButton.bringToFront()
+                            handler.removeCallbacks(hideRunnable)
+                            handler.postDelayed(hideRunnable, 3000) // ৩ সেকেন্ড পর লুকিয়ে যাবে
                         } else {
                             castButton.visibility = View.GONE
+                            handler.removeCallbacks(hideRunnable)
                         }
                     }
                 })
