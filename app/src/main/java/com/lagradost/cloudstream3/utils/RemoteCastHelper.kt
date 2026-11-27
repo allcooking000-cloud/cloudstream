@@ -3,7 +3,6 @@ package com.lagradost.cloudstream3.utils
 import android.app.Activity
 import android.net.Uri
 import android.widget.Toast
-import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -20,7 +19,7 @@ object RemoteCastHelper {
         launcher.launch(options)
     }
 
-    // এখানে ৪টি প্যারামিটার (headers সহ) 
+    // হেডার সহ রেজাল্ট প্রসেস করা
     fun handleScanResult(result: String?, currentVideoUrl: String?, headers: Map<String, String>?, context: Activity) {
         if (result == null) {
             Toast.makeText(context, "Scan Cancelled", Toast.LENGTH_SHORT).show()
@@ -34,7 +33,7 @@ object RemoteCastHelper {
 
         val encodedUrl = Uri.encode(currentVideoUrl)
         
-        // হেডারগুলোকে স্ট্রিং এ কনভার্ট করে এনকোড করা
+        // হেডারগুলোকে স্ট্রিং এ কনভার্ট করে এনকোড করা (যেমন: Referer:xyz|User-Agent:abc)
         val headersString = headers?.entries?.joinToString("|") { "${it.key}:${it.value}" } ?: ""
         val encodedHeaders = Uri.encode(headersString)
 
